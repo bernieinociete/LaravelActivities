@@ -1,7 +1,6 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -17,6 +16,10 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-Auth::routes();
+Route::resources([
+    '/posts' => PostController::class,
+    '/home' => HomeController::class,
+    '/login' => LoginController::class,
+]);
 
-Route::get('/home', 'HomeController@index')->name('home');
+Auth::routes();
