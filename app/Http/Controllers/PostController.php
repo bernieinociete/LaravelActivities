@@ -3,9 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Post;
+use App\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-
+use Illuminate\Support\Facades\DB;
 
 class PostController extends Controller
 {
@@ -17,8 +18,11 @@ class PostController extends Controller
     public function index()
     {
         //
-        $posts = Post::get(); 
-        return view('posts.index', compact('posts'));
+        $user = User::find(Auth::id());
+    
+        $posts = $user->posts()->where('title','!=','')->get();
+        $count = $user->posts()->where('title','!=','')->count();
+        return view('posts.index', compact('posts', 'count'));
     }
 
     /**
@@ -32,9 +36,8 @@ class PostController extends Controller
         if (Auth::check()) {
             return view('posts.create');
         } else {
-            return view('auth.login');
+            return redirect('login');
         }
-        
     }
 
     /**
@@ -66,59 +69,63 @@ class PostController extends Controller
             $filenameToStore = '';
         }
 
-      // dd($request);
+        //
         $post = new Post();
         $post->title = $request->title;
         $post->description = $request->description;
         $post->img = $filenameToStore;
-       
+        $post->user_id = auth()->user()->id;
+        $post->save();
+
         if ($post->save()){
             return redirect('/posts')->with('status','Sucessfully save');
         }
 
         return redirect('/posts');
-
     }
 
     /**
      * Display the specified resource.
      *
-     * @param  int  $id
+     * @param  \App\Post  $post
      * @return \Illuminate\Http\Response
      */
     public function show($id)
     {
         //
         $post = Post::find($id);
-        return view('posts.show', compact('post'));
-        // dd($post);
+        $comments = $post->comments;
+
+        return view('posts.show', compact('post', 'comments'));
     }
 
     /**
      * Show the form for editing the specified resource.
      *
-     * @param  int  $id
+     * @param  \App\Post  $post
      * @return \Illuminate\Http\Response
      */
     public function edit($id)
     {
         //
-        if (Auth::check()) {
+        if (Auth::check()){
             $post = Post::find($id);
             return view('posts.edit', compact('post'));
         } else {
-            return view('auth.login');
+            return redirect('login');
         }
     }
+
     /**
      * Update the specified resource in storage.
      *
      * @param  \Illuminate\Http\Request  $request
-     * @param  int  $id
+     * @param  \App\Post  $post
      * @return \Illuminate\Http\Response
      */
     public function update(Request $request, $id)
     {
+        //
         $request->validate([
             'title' => 'required|max:100',
             'description' => 'required'
@@ -136,23 +143,21 @@ class PostController extends Controller
 
             $path = $request->file('img')->storeAs('public/img', $filenameToStore);
         } else{
-               
             $filenameToStore = '';
         }
 
-        $post = \App\Models\Post::find($id);
+        $post = Post::find($id);
         $post->title = $request->title;
         $post->description = $request->description;
         $post->save();
 
         return redirect('/posts');
-
     }
 
     /**
      * Remove the specified resource from storage.
      *
-     * @param  int  $id
+     * @param  \App\Post  $post
      * @return \Illuminate\Http\Response
      */
     public function destroy($id)
@@ -161,11 +166,11 @@ class PostController extends Controller
         if (Auth::check()) {
             $post = Post::find($id);
             $post->delete();
-
-            return redirect('/posts');
-        } else {
-            return view('auth.login');
-        }
         
+        return redirect('/posts');
+        } else {
+            return redirect('login');
+        }
+
     }
 }
